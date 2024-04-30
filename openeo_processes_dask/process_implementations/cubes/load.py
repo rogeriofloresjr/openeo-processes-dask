@@ -86,6 +86,7 @@ def load_stac(
     temporal_extent: Optional[TemporalInterval] = None,
     bands: Optional[list[str]] = None,
     properties: Optional[dict] = None,
+    epsg: Optional[int] = None,
 ) -> RasterCube:
     asset_type = _validate_stac(url)
 
@@ -96,7 +97,7 @@ def load_stac(
             catalog_url, collection_id = _search_for_parent_catalog(url)
 
             # Check if we are connecting to Microsoft Planetary Computer, where we need to sign the connection
-            modifier = pc.sign_inplace if "planetarycomputer" in catalog_url else None
+            modifier = pc.sign_inplace if "planetarycomputer" in catalog_url and collection_id == 'sentinel-2-l2a' else None
 
             catalog = pystac_client.Client.open(catalog_url, modifier=modifier)
 
@@ -132,7 +133,12 @@ def load_stac(
             if properties is not None:
                 query_params["query"] = properties
 
-            items = catalog.search(**query_params).item_collection()
+            if "planetarycomputer" in catalog_url and collection_id == 'sentinel-2-l2a':
+                signed_item_collection = pc.sign(catalog.search(**query_params))
+                items = signed_item_collection.item_collection()
+            else:
+                items = catalog.search(**query_params).item_collection()
+                #items = catalog.search(**query_params).item_collection()
 
         else:
             # Load the whole collection wihout filters
@@ -151,9 +157,9 @@ def load_stac(
         )
 
     if bands is not None:
-        stack = stackstac.stack(items, assets=bands)
+        stack = stackstac.stack(items, assets=bands,epsg=epsg)
     else:
-        stack = stackstac.stack(items)
+        stack = stackstac.stack(items,epsg=epsg)
 
     if spatial_extent is not None:
         stack = filter_bbox(stack, spatial_extent)

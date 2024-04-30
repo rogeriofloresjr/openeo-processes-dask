@@ -31,6 +31,7 @@ def resample_spatial(
     projection: Optional[Union[str, int]] = None,
     resolution: int = 0,
     method: str = "near",
+    align: Optional[Union[str, RasterCube]] = None,
 ):
     """Resamples the spatial dimensions (x,y) of the data cube to a specified resolution and/or warps the data cube to the target projection. At least resolution or projection must be specified."""
 
